@@ -1,6 +1,6 @@
 import { ArrowLeft, ChevronRight, Info, Globe, Shield, Bell, Palette, CircleUser, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
-import nexusLogo from "@/assets/nexus-logo.png";
+import nexusLogo from "@/assets/nexus-icon.jpg";
 
 const settingsGroups = [
   {
