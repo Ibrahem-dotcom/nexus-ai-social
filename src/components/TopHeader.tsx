@@ -1,4 +1,4 @@
-import nexusLogo from "@/assets/nexus-logo.png";
+import nexusLogo from "@/assets/nexus-icon.jpg";
 import { Bell, Heart } from "lucide-react";
 
 const TopHeader = () => {
