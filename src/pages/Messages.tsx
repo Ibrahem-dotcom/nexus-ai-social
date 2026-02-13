@@ -1,18 +1,79 @@
-import { Search, Edit } from "lucide-react";
-
-const conversations = [
-  { name: "Sarah Chen", avatar: "https://i.pravatar.cc/100?img=5", lastMsg: "That sounds amazing! 🔥", time: "2m", unread: 3, online: true },
-  { name: "Alex Rivera", avatar: "https://i.pravatar.cc/100?img=3", lastMsg: "Check out this new feature", time: "15m", unread: 1, online: true },
-  { name: "NEXUS Team", avatar: "https://i.pravatar.cc/100?img=68", lastMsg: "Welcome to the team channel", time: "1h", unread: 0, online: false, isGroup: true },
-  { name: "Luna Park", avatar: "https://i.pravatar.cc/100?img=9", lastMsg: "See you tomorrow!", time: "3h", unread: 0, online: false },
-  { name: "Mike Johnson", avatar: "https://i.pravatar.cc/100?img=8", lastMsg: "Sent a photo", time: "5h", unread: 0, online: true },
-  { name: "Tech Creators", avatar: "https://i.pravatar.cc/100?img=11", lastMsg: "New project ideas 💡", time: "1d", unread: 12, online: false, isGroup: true },
-];
+import { Search, Edit, Send, ArrowLeft } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useConversations, useMessages, useSendMessage } from "@/hooks/use-messages";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatDistanceToNow } from "date-fns";
 
 const Messages = () => {
+  const { data: conversations, isLoading } = useConversations();
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { data: messages } = useMessages(activeConvId);
+  const sendMessage = useSendMessage();
+  const [messageText, setMessageText] = useState("");
+  const { user } = useAuth();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!messageText.trim() || !activeConvId) return;
+    try {
+      await sendMessage.mutateAsync({ conversationId: activeConvId, content: messageText.trim() });
+      setMessageText("");
+    } catch {}
+  };
+
+  const activeConv = conversations?.find(c => c.id === activeConvId);
+
+  // Chat view
+  if (activeConvId && activeConv) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="sticky top-0 z-40 glass-strong p-4 flex items-center gap-3">
+          <button onClick={() => setActiveConvId(null)} className="p-1">
+            <ArrowLeft size={22} />
+          </button>
+          <img src={activeConv.participant.avatar_url || "https://i.pravatar.cc/100"} alt="" className="w-9 h-9 rounded-full object-cover" />
+          <span className="font-semibold text-sm">{activeConv.participant.username}</span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-20">
+          {messages?.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
+                msg.sender_id === user?.id ? "gradient-primary text-primary-foreground" : "bg-secondary text-foreground"
+              }`}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 glass-strong p-4 safe-area-bottom">
+          <div className="flex gap-2 max-w-lg mx-auto">
+            <input
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Message..."
+              className="flex-1 h-10 px-4 rounded-full bg-secondary text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            />
+            <button onClick={handleSend} disabled={sendMessage.isPending || !messageText.trim()} className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center disabled:opacity-50">
+              <Send size={18} className="text-primary-foreground" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Conversation list
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
       <div className="sticky top-0 z-40 glass-strong p-4">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-display font-bold">Messages</h1>
@@ -25,57 +86,47 @@ const Messages = () => {
           <input
             type="text"
             placeholder="Search messages..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-10 pl-10 pr-4 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </div>
       </div>
 
-      {/* Online now */}
-      <div className="px-4 py-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Online Now</p>
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide">
-          {conversations.filter(c => c.online).map((c, i) => (
-            <button key={i} className="flex flex-col items-center gap-1 min-w-fit">
-              <div className="relative">
-                <img src={c.avatar} alt={c.name} className="w-14 h-14 rounded-full object-cover border-2 border-secondary" />
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-background" style={{ backgroundColor: "hsl(142, 71%, 45%)" }} />
+      {isLoading && (
+        <div className="px-4 py-6 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 animate-pulse">
+              <div className="w-12 h-12 rounded-full bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="w-24 h-3 bg-muted rounded" />
+                <div className="w-40 h-2 bg-muted rounded" />
               </div>
-              <span className="text-xs text-muted-foreground w-14 truncate text-center">{c.name.split(" ")[0]}</span>
-            </button>
+            </div>
           ))}
         </div>
-      </div>
+      )}
 
-      {/* Conversation list */}
+      {!isLoading && (!conversations || conversations.length === 0) && (
+        <div className="text-center py-16">
+          <p className="text-muted-foreground text-lg">No conversations yet</p>
+          <p className="text-muted-foreground text-sm mt-1">Start messaging someone!</p>
+        </div>
+      )}
+
       <div className="px-2">
-        {conversations.map((conv, i) => (
+        {conversations?.filter(c => !searchTerm || c.participant.username.toLowerCase().includes(searchTerm.toLowerCase())).map((conv) => (
           <button
-            key={i}
+            key={conv.id}
+            onClick={() => setActiveConvId(conv.id)}
             className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-secondary/50 transition-colors"
           >
             <div className="relative flex-shrink-0">
-              <img src={conv.avatar} alt={conv.name} className="w-12 h-12 rounded-full object-cover" />
-              {conv.online && (
-                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background" style={{ backgroundColor: "hsl(142, 71%, 45%)" }} />
-              )}
+              <img src={conv.participant.avatar_url || "https://i.pravatar.cc/100"} alt={conv.participant.username} className="w-12 h-12 rounded-full object-cover" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-semibold ${conv.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                  {conv.name}
-                </span>
-                <span className={`text-xs ${conv.unread > 0 ? "text-primary" : "text-muted-foreground"}`}>{conv.time}</span>
-              </div>
-              <div className="flex items-center justify-between mt-0.5">
-                <p className={`text-sm truncate ${conv.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                  {conv.lastMsg}
-                </p>
-                {conv.unread > 0 && (
-                  <span className="ml-2 min-w-[20px] h-5 px-1.5 rounded-full gradient-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
-                    {conv.unread}
-                  </span>
-                )}
-              </div>
+              <span className="text-sm font-semibold text-foreground">{conv.participant.username}</span>
+              <p className="text-sm text-muted-foreground truncate">{conv.last_message || "No messages yet"}</p>
             </div>
           </button>
         ))}
