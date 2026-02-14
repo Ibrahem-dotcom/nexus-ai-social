@@ -3,9 +3,12 @@ import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, BadgeCheck, Sen
 import { useToggleLike } from "@/hooks/use-posts";
 import { useComments, useAddComment } from "@/hooks/use-comments";
 import { formatDistanceToNow } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface PostCardProps {
   id: string;
+  userId: string;
   username: string;
   avatar: string | null;
   image: string | null;
@@ -17,13 +20,15 @@ interface PostCardProps {
   is_liked: boolean;
 }
 
-const PostCard = ({ id, username, avatar, image, caption, likes_count, comments_count, created_at, verified, is_liked }: PostCardProps) => {
+const PostCard = ({ id, userId, username, avatar, image, caption, likes_count, comments_count, created_at, verified, is_liked }: PostCardProps) => {
   const [saved, setSaved] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const toggleLike = useToggleLike();
   const { data: comments } = useComments(showComments ? id : null);
   const addComment = useAddComment();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLike = () => {
     toggleLike.mutate({ postId: id, isLiked: is_liked });
@@ -42,18 +47,18 @@ const PostCard = ({ id, username, avatar, image, caption, likes_count, comments_
   return (
     <article className="glass rounded-2xl overflow-hidden animate-slide-up mb-4">
       <div className="flex items-center justify-between p-3">
-        <div className="flex items-center gap-3">
+        <button onClick={() => navigate(`/user/${userId}`)} className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full gradient-primary p-0.5">
             <img src={avatar || "https://i.pravatar.cc/100"} alt={username} className="w-full h-full rounded-full object-cover border-2 border-background" />
           </div>
-          <div>
+          <div className="text-left">
             <div className="flex items-center gap-1">
               <span className="text-sm font-semibold text-foreground">{username}</span>
               {verified && <BadgeCheck size={14} className="text-primary" />}
             </div>
             <span className="text-xs text-muted-foreground">{timeAgo}</span>
           </div>
-        </div>
+        </button>
         <button className="p-1 text-muted-foreground hover:text-foreground transition-colors">
           <MoreHorizontal size={18} />
         </button>
@@ -74,7 +79,7 @@ const PostCard = ({ id, username, avatar, image, caption, likes_count, comments_
             <button onClick={() => setShowComments(!showComments)}>
               <MessageCircle size={24} className="text-foreground" />
             </button>
-            <button><Share2 size={22} className="text-foreground" /></button>
+            <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/post/${id}`); toast({ title: "Link copied!" }); }}><Share2 size={22} className="text-foreground" /></button>
           </div>
           <button onClick={() => setSaved(!saved)}>
             <Bookmark size={24} className={`transition-colors ${saved ? "text-primary fill-primary" : "text-foreground"}`} />

@@ -32,9 +32,9 @@ const Settings = () => {
     {
       title: t("account"),
       items: [
-        { icon: CircleUser, label: t("edit_profile"), desc: "Name, bio, avatar", action: undefined },
+        { icon: CircleUser, label: t("edit_profile"), desc: "Name, bio, avatar", action: () => navigate("/profile") },
         { icon: Shield, label: t("security"), desc: "Password, 2FA", action: undefined },
-        { icon: Bell, label: t("notifications"), desc: "Push, email, sounds", action: undefined },
+        { icon: Bell, label: t("notifications"), desc: "Push, email, sounds", action: () => navigate("/notifications") },
       ],
     },
     {

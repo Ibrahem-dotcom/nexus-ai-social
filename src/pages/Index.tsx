@@ -39,6 +39,7 @@ const Index = () => {
             <PostCard
               key={post.id}
               id={post.id}
+              userId={post.user_id}
               username={post.profiles.username}
               avatar={post.profiles.avatar_url}
               image={post.image_url}
