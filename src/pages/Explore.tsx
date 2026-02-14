@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 const tags = ["Trending", "Tech", "Art", "Music", "Travel", "Food", "Gaming"];
 
@@ -71,13 +72,13 @@ const Explore = () => {
       {searchTerm && searchResults && (
         <div className="px-4 py-2 space-y-1">
           {searchResults.map((u: any) => (
-            <div key={u.user_id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors">
+            <Link to={`/user/${u.user_id}`} key={u.user_id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors">
               <img src={u.avatar_url || "https://i.pravatar.cc/100"} alt="" className="w-10 h-10 rounded-full object-cover" />
               <div>
                 <p className="text-sm font-semibold">{u.username}</p>
                 {u.display_name && <p className="text-xs text-muted-foreground">{u.display_name}</p>}
               </div>
-            </div>
+            </Link>
           ))}
           {searchResults.length === 0 && <p className="text-center text-muted-foreground py-4">No users found</p>}
         </div>

@@ -45,7 +45,7 @@ const Reels = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/30" />
 
-            <div className="absolute right-3 bottom-32 flex flex-col items-center gap-6">
+            <div className="absolute right-3 bottom-32 flex flex-col items-center gap-6" style={{ zIndex: 10 }}>
               <button onClick={() => toggleLike.mutate({ reelId: r.id, isLiked: r.is_liked })} className="flex flex-col items-center gap-1">
                 <Heart size={28} className={r.is_liked ? "text-neon-pink fill-neon-pink" : "text-foreground"} />
                 <span className="text-xs font-medium">{r.likes_count}</span>
@@ -63,7 +63,7 @@ const Reels = () => {
               </button>
             </div>
 
-            <div className="absolute bottom-24 left-0 right-16 p-4">
+            <div className="absolute bottom-24 left-0 right-16 p-4" style={{ zIndex: 10 }}>
               <div className="flex items-center gap-2 mb-2">
                 <img src={r.profiles.avatar_url || "https://i.pravatar.cc/100"} alt="" className="w-9 h-9 rounded-full border-2 border-primary" />
                 <span className="font-semibold text-sm">{r.profiles.username}</span>
@@ -87,7 +87,8 @@ const Reels = () => {
       </div>
 
       <div
-        className="absolute inset-0 z-10"
+        className="absolute inset-0"
+        style={{ zIndex: 5 }}
         onTouchStart={(e) => {
           const startY = e.touches[0].clientY;
           const handleEnd = (ev: TouchEvent) => {
@@ -97,15 +98,6 @@ const Reels = () => {
             document.removeEventListener("touchend", handleEnd);
           };
           document.addEventListener("touchend", handleEnd);
-        }}
-        onClick={(e) => {
-          const rect = (e.target as HTMLElement).getBoundingClientRect();
-          const clickY = e.clientY - rect.top;
-          if (clickY > rect.height / 2 && currentReel < reels.length - 1) {
-            setCurrentReel(prev => prev + 1);
-          } else if (clickY <= rect.height / 2 && currentReel > 0) {
-            setCurrentReel(prev => prev - 1);
-          }
         }}
       />
     </div>

@@ -141,7 +141,7 @@ const Profile = () => {
               <button onClick={startEditing} className="flex-1 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold">
                 {t("edit_profile")}
               </button>
-              <button className="flex-1 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">
+              <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/user/${user?.id}`); toast({ title: "Profile link copied!" }); }} className="flex-1 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">
                 {t("share_profile")}
               </button>
             </>
