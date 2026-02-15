@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, BadgeCheck } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { X, ChevronLeft, ChevronRight, BadgeCheck, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import type { StoryGroup } from "@/hooks/use-stories";
 
 interface StoryViewerProps {
@@ -16,7 +17,10 @@ const StoryViewer = ({ groups, initialGroupIndex, onClose }: StoryViewerProps) =
   const [groupIndex, setGroupIndex] = useState(initialGroupIndex);
   const [storyIndex, setStoryIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const viewedStories = useRef(new Set<string>());
 
   const group = groups[groupIndex];
   const story = group?.stories[storyIndex];
@@ -48,6 +52,7 @@ const StoryViewer = ({ groups, initialGroupIndex, onClose }: StoryViewerProps) =
 
   // Auto-progress timer
   useEffect(() => {
+    if (paused) return;
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -58,15 +63,29 @@ const StoryViewer = ({ groups, initialGroupIndex, onClose }: StoryViewerProps) =
       });
     }, 50);
     return () => clearInterval(interval);
-  }, [goNext]);
+  }, [goNext, paused]);
 
-  // Record view
+  // Record view (prevent duplicates)
   useEffect(() => {
     if (!story || !user) return;
+    if (viewedStories.current.has(story.id)) return;
+    viewedStories.current.add(story.id);
     supabase.from("story_views").insert({ story_id: story.id, viewer_id: user.id }).then(() => {});
   }, [story?.id, user?.id]);
 
+  const handleDelete = async () => {
+    if (!story || !user || story.user_id !== user.id) return;
+    try {
+      await supabase.from("story_views").delete().eq("story_id", story.id);
+      await supabase.from("stories").delete().eq("id", story.id).eq("user_id", user.id);
+      queryClient.invalidateQueries({ queryKey: ["stories"] });
+      goNext();
+    } catch {}
+  };
+
   if (!group || !story) return null;
+
+  const isOwner = user?.id === story.user_id;
 
   return (
     <div className="fixed inset-0 z-[200] bg-background flex flex-col">
@@ -89,7 +108,12 @@ const StoryViewer = ({ groups, initialGroupIndex, onClose }: StoryViewerProps) =
           <span className="text-sm font-semibold">{group.username}</span>
           {group.is_verified && <BadgeCheck size={14} className="text-primary" />}
         </div>
-        <button onClick={onClose} className="p-1"><X size={24} /></button>
+        <div className="flex items-center gap-2">
+          {isOwner && (
+            <button onClick={handleDelete} className="p-1"><Trash2 size={20} className="text-destructive" /></button>
+          )}
+          <button onClick={onClose} className="p-1"><X size={24} /></button>
+        </div>
       </div>
 
       {/* Media */}
@@ -101,9 +125,26 @@ const StoryViewer = ({ groups, initialGroupIndex, onClose }: StoryViewerProps) =
         )}
       </div>
 
-      {/* Tap zones */}
-      <button onClick={goPrev} className="absolute left-0 top-16 bottom-0 w-1/3 z-10" aria-label="Previous" />
-      <button onClick={goNext} className="absolute right-0 top-16 bottom-0 w-1/3 z-10" aria-label="Next" />
+      {/* Tap zones: left prev, right next, center hold to pause */}
+      <button
+        onClick={goPrev}
+        onPointerDown={() => setPaused(true)}
+        onPointerUp={() => setPaused(false)}
+        className="absolute left-0 top-16 bottom-0 w-1/3 z-10"
+        aria-label="Previous"
+      />
+      <div
+        onPointerDown={() => setPaused(true)}
+        onPointerUp={() => setPaused(false)}
+        className="absolute left-1/3 top-16 bottom-0 w-1/3 z-10"
+      />
+      <button
+        onClick={goNext}
+        onPointerDown={() => setPaused(true)}
+        onPointerUp={() => setPaused(false)}
+        className="absolute right-0 top-16 bottom-0 w-1/3 z-10"
+        aria-label="Next"
+      />
     </div>
   );
 };

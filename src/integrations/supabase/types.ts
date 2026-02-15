@@ -436,6 +436,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          id: string
+          notify_comments: boolean
+          notify_follows: boolean
+          notify_likes: boolean
+          notify_messages: boolean
+          private_account: boolean
+          updated_at: string
+          user_id: string
+          who_can_comment: string
+          who_can_message: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notify_comments?: boolean
+          notify_follows?: boolean
+          notify_likes?: boolean
+          notify_messages?: boolean
+          private_account?: boolean
+          updated_at?: string
+          user_id: string
+          who_can_comment?: string
+          who_can_message?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notify_comments?: boolean
+          notify_follows?: boolean
+          notify_likes?: boolean
+          notify_messages?: boolean
+          private_account?: boolean
+          updated_at?: string
+          user_id?: string
+          who_can_comment?: string
+          who_can_message?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

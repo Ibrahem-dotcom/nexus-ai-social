@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useProfileStats, useUploadAvatar, useUpdateProfile } from "@/hooks/use-profile";
 import { useUserPosts } from "@/hooks/use-posts";
 import { useToast } from "@/hooks/use-toast";
+import { shareContent } from "@/lib/share";
 
 const tabs = [
   { icon: Grid3X3, label: "posts" },
@@ -54,6 +55,12 @@ const Profile = () => {
     }
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/user/${user?.id}`;
+    const result = await shareContent({ title: `${profile?.username} on NEXUS`, text: "Check out this profile on NEXUS", url });
+    if (result === "copied") toast({ title: "Profile link copied!" });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 z-40 glass-strong p-4 flex items-center justify-between">
@@ -71,11 +78,7 @@ const Profile = () => {
       <div className="px-4 py-4">
         <div className="flex items-center gap-6">
           <button onClick={() => avatarInputRef.current?.click()} className="relative w-20 h-20 rounded-full gradient-primary p-0.5 neon-glow">
-            <img
-              src={profile?.avatar_url || "https://i.pravatar.cc/200?img=68"}
-              alt="Profile"
-              className="w-full h-full rounded-full object-cover border-2 border-background"
-            />
+            <img src={profile?.avatar_url || "https://i.pravatar.cc/200?img=68"} alt="Profile" className="w-full h-full rounded-full object-cover border-2 border-background" />
             <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-primary flex items-center justify-center border-2 border-background">
               <Camera size={12} className="text-primary-foreground" />
             </div>
@@ -99,29 +102,14 @@ const Profile = () => {
         <div className="mt-3">
           {isEditing ? (
             <div className="space-y-2">
-              <input
-                value={editDisplayName}
-                onChange={(e) => setEditDisplayName(e.target.value)}
-                placeholder="Display name"
-                className="w-full text-sm bg-secondary rounded-lg px-3 py-2 text-foreground"
-              />
-              <textarea
-                value={editBio}
-                onChange={(e) => setEditBio(e.target.value)}
-                placeholder="Bio"
-                className="w-full text-sm bg-secondary rounded-lg px-3 py-2 text-foreground resize-none"
-                rows={3}
-              />
+              <input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder="Display name" className="w-full text-sm bg-secondary rounded-lg px-3 py-2 text-foreground" />
+              <textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Bio" className="w-full text-sm bg-secondary rounded-lg px-3 py-2 text-foreground resize-none" rows={3} />
             </div>
           ) : (
             <>
               <h2 className="font-semibold text-sm">{profile?.display_name || "User"}</h2>
-              {profile?.is_founder && (
-                <p className="text-xs text-primary font-medium">{t("founder")}</p>
-              )}
-              <p className="text-sm text-muted-foreground mt-1">
-                {profile?.bio || "No bio yet"}
-              </p>
+              {profile?.is_founder && <p className="text-xs text-primary font-medium">{t("founder")}</p>}
+              <p className="text-sm text-muted-foreground mt-1">{profile?.bio || "No bio yet"}</p>
             </>
           )}
         </div>
@@ -132,18 +120,12 @@ const Profile = () => {
               <button onClick={saveProfile} disabled={updateProfile.isPending} className="flex-1 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold">
                 {updateProfile.isPending ? "Saving..." : "Save"}
               </button>
-              <button onClick={() => setIsEditing(false)} className="flex-1 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">
-                Cancel
-              </button>
+              <button onClick={() => setIsEditing(false)} className="flex-1 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">Cancel</button>
             </>
           ) : (
             <>
-              <button onClick={startEditing} className="flex-1 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold">
-                {t("edit_profile")}
-              </button>
-              <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/user/${user?.id}`); toast({ title: "Profile link copied!" }); }} className="flex-1 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">
-                {t("share_profile")}
-              </button>
+              <button onClick={startEditing} className="flex-1 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold">{t("edit_profile")}</button>
+              <button onClick={handleShare} className="flex-1 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">{t("share_profile")}</button>
             </>
           )}
         </div>
@@ -151,26 +133,14 @@ const Profile = () => {
 
       <div className="flex border-b border-border">
         {tabs.map((tab, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveTab(i)}
-            className={`flex-1 py-3 flex items-center justify-center transition-colors ${
-              activeTab === i ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
-            }`}
-          >
+          <button key={i} onClick={() => setActiveTab(i)} className={`flex-1 py-3 flex items-center justify-center transition-colors ${activeTab === i ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}>
             <tab.icon size={20} />
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-3 gap-0.5 p-0.5">
-        {postsLoading && (
-          <>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="aspect-square bg-muted animate-pulse" />
-            ))}
-          </>
-        )}
+        {postsLoading && [1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="aspect-square bg-muted animate-pulse" />)}
         {userPosts?.map((post) => (
           <div key={post.id} className="aspect-square overflow-hidden bg-secondary">
             {post.image_url ? (
@@ -181,9 +151,7 @@ const Profile = () => {
           </div>
         ))}
         {!postsLoading && userPosts?.length === 0 && (
-          <div className="col-span-3 py-16 text-center text-muted-foreground">
-            <p>No posts yet</p>
-          </div>
+          <div className="col-span-3 py-16 text-center text-muted-foreground"><p>No posts yet</p></div>
         )}
       </div>
     </div>
