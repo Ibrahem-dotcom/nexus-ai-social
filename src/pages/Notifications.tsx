@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import { useEffect, useRef } from "react";
 
 const iconMap: Record<string, any> = {
   like: Heart,
@@ -14,6 +15,7 @@ const iconMap: Record<string, any> = {
 const Notifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const markedRef = useRef(false);
 
   const { data: notifications, isLoading } = useQuery({
     queryKey: ["notifications", user?.id],
@@ -38,18 +40,16 @@ const Notifications = () => {
     enabled: !!user,
   });
 
-  const markRead = useMutation({
-    mutationFn: async () => {
-      if (!user) return;
-      await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
-  });
-
-  // Mark all as read on mount
-  if (notifications?.some((n: any) => !n.read)) {
-    markRead.mutate();
-  }
+  // Mark all as read once on mount
+  useEffect(() => {
+    if (!user || markedRef.current) return;
+    if (notifications?.some((n: any) => !n.read)) {
+      markedRef.current = true;
+      supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["unread-notifications"] });
+      });
+    }
+  }, [notifications, user, queryClient]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -80,10 +80,12 @@ const Notifications = () => {
           const Icon = iconMap[n.type] || Heart;
           return (
             <div key={n.id} className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${!n.read ? "bg-primary/5" : ""}`}>
-              <img src={n.actor?.avatar_url || "https://i.pravatar.cc/100"} alt="" className="w-10 h-10 rounded-full object-cover" />
+              <Link to={n.actor ? `/user/${n.actor.user_id}` : "#"}>
+                <img src={n.actor?.avatar_url || "https://i.pravatar.cc/100"} alt="" className="w-10 h-10 rounded-full object-cover" />
+              </Link>
               <div className="flex-1 min-w-0">
                 <p className="text-sm">
-                  <span className="font-semibold">{n.actor?.username || "Someone"}</span>{" "}
+                  <Link to={n.actor ? `/user/${n.actor.user_id}` : "#"} className="font-semibold hover:underline">{n.actor?.username || "Someone"}</Link>{" "}
                   <span className="text-muted-foreground">
                     {n.type === "like" && "liked your post"}
                     {n.type === "comment" && "commented on your post"}

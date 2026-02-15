@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Globe, Shield, Bell, Palette, CircleUser, LogOut } from "lucide-react";
+import { ArrowLeft, ChevronRight, Globe, Shield, Bell, Palette, CircleUser, LogOut, Lock, Eye } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import nexusLogo from "@/assets/nexus-icon.jpg";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,15 +33,15 @@ const Settings = () => {
       title: t("account"),
       items: [
         { icon: CircleUser, label: t("edit_profile"), desc: "Name, bio, avatar", action: () => navigate("/profile") },
-        { icon: Shield, label: t("security"), desc: "Password, 2FA", action: undefined },
-        { icon: Bell, label: t("notifications"), desc: "Push, email, sounds", action: () => navigate("/notifications") },
+        { icon: Shield, label: t("security"), desc: "Password", action: () => navigate("/settings/security") },
+        { icon: Eye, label: "Privacy", desc: "Account, interactions", action: () => navigate("/settings/privacy") },
+        { icon: Bell, label: t("notifications"), desc: "Push notifications", action: () => navigate("/settings/notifications") },
       ],
     },
     {
       title: t("preferences"),
       items: [
         { icon: Globe, label: t("language"), desc: currentLang, action: cycleLang },
-        { icon: Palette, label: t("appearance"), desc: "Dark mode", action: undefined },
       ],
     },
   ];

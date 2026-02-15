@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Heart, MessageCircle, Share2, Music, Volume2, VolumeX, BadgeCheck } from "lucide-react";
 import { useReels, useToggleReelLike } from "@/hooks/use-reels";
-import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { shareContent } from "@/lib/share";
 
 const Reels = () => {
   const { data: reels, isLoading, error } = useReels();
@@ -9,6 +10,36 @@ const Reels = () => {
   const [muted, setMuted] = useState(false);
   const toggleLike = useToggleReelLike();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const { toast } = useToast();
+  const viewedReels = useRef(new Set<string>());
+
+  // Auto-play current, pause others
+  useEffect(() => {
+    videoRefs.current.forEach((v, i) => {
+      if (!v) return;
+      if (i === currentReel) {
+        v.play().catch(() => {});
+      } else {
+        v.pause();
+        v.currentTime = 0;
+      }
+    });
+  }, [currentReel, reels]);
+
+  // Track view once per session
+  useEffect(() => {
+    if (!reels?.length) return;
+    const reel = reels[currentReel];
+    if (reel && !viewedReels.current.has(reel.id)) {
+      viewedReels.current.add(reel.id);
+    }
+  }, [currentReel, reels]);
+
+  const handleShare = async (reelId: string, username: string) => {
+    const url = `${window.location.origin}/reel/${reelId}`;
+    const result = await shareContent({ title: `Reel by ${username}`, text: "Check out this reel on NEXUS", url });
+    if (result === "copied") toast({ title: "Link copied!" });
+  };
 
   if (isLoading) {
     return (
@@ -27,8 +58,6 @@ const Reels = () => {
     );
   }
 
-  const reel = reels[currentReel];
-
   return (
     <div className="h-screen bg-background overflow-hidden relative">
       <div className="h-full transition-transform duration-500 ease-out" style={{ transform: `translateY(-${currentReel * 100}%)` }}>
@@ -41,7 +70,6 @@ const Reels = () => {
               loop
               muted={muted}
               playsInline
-              autoPlay={i === currentReel}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/30" />
 
@@ -54,7 +82,7 @@ const Reels = () => {
                 <MessageCircle size={28} className="text-foreground" />
                 <span className="text-xs font-medium">{r.comments_count}</span>
               </button>
-              <button className="flex flex-col items-center gap-1">
+              <button onClick={() => handleShare(r.id, r.profiles.username)} className="flex flex-col items-center gap-1">
                 <Share2 size={26} className="text-foreground" />
                 <span className="text-xs font-medium">Share</span>
               </button>

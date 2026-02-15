@@ -5,6 +5,7 @@ import { useComments, useAddComment } from "@/hooks/use-comments";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { shareContent } from "@/lib/share";
 
 interface PostCardProps {
   id: string;
@@ -42,7 +43,27 @@ const PostCard = ({ id, userId, username, avatar, image, caption, likes_count, c
     } catch {}
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/post/${id}`;
+    const result = await shareContent({ title: `Post by ${username}`, text: caption || "Check out this post on NEXUS", url });
+    if (result === "copied") toast({ title: "Link copied!" });
+  };
+
   const timeAgo = formatDistanceToNow(new Date(created_at), { addSuffix: true });
+
+  // Parse caption for @mentions and #hashtags
+  const renderCaption = (text: string) => {
+    const parts = text.split(/(@\w+|#\w+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("@")) {
+        return <button key={i} onClick={() => navigate(`/explore?search=${part.slice(1)}`)} className="text-primary font-medium">{part}</button>;
+      }
+      if (part.startsWith("#")) {
+        return <button key={i} onClick={() => navigate(`/explore?tag=${part.slice(1)}`)} className="text-primary font-medium">{part}</button>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
 
   return (
     <article className="glass rounded-2xl overflow-hidden animate-slide-up mb-4">
@@ -79,7 +100,7 @@ const PostCard = ({ id, userId, username, avatar, image, caption, likes_count, c
             <button onClick={() => setShowComments(!showComments)}>
               <MessageCircle size={24} className="text-foreground" />
             </button>
-            <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/post/${id}`); toast({ title: "Link copied!" }); }}><Share2 size={22} className="text-foreground" /></button>
+            <button onClick={handleShare}><Share2 size={22} className="text-foreground" /></button>
           </div>
           <button onClick={() => setSaved(!saved)}>
             <Bookmark size={24} className={`transition-colors ${saved ? "text-primary fill-primary" : "text-foreground"}`} />
@@ -89,7 +110,7 @@ const PostCard = ({ id, userId, username, avatar, image, caption, likes_count, c
         {caption && (
           <p className="text-sm">
             <span className="font-semibold">{username}</span>{" "}
-            <span className="text-muted-foreground">{caption}</span>
+            <span className="text-muted-foreground">{renderCaption(caption)}</span>
           </p>
         )}
         {comments_count > 0 && !showComments && (
@@ -104,7 +125,7 @@ const PostCard = ({ id, userId, username, avatar, image, caption, likes_count, c
               <div key={c.id} className="flex gap-2">
                 <img src={c.profiles.avatar_url || "https://i.pravatar.cc/30"} alt="" className="w-6 h-6 rounded-full object-cover mt-0.5" />
                 <p className="text-sm">
-                  <span className="font-semibold">{c.profiles.username}</span>{" "}
+                  <button onClick={() => navigate(`/user/${c.user_id}`)} className="font-semibold hover:underline">{c.profiles.username}</button>{" "}
                   <span className="text-muted-foreground">{c.content}</span>
                 </p>
               </div>
