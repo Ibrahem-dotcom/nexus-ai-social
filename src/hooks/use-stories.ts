@@ -69,16 +69,33 @@ export function useCreateStory() {
   return useMutation({
     mutationFn: async ({ file, mediaType }: { file: File; mediaType: string }) => {
       if (!user) throw new Error("Not authenticated");
+      if (!file || file.size === 0) throw new Error("Invalid file selected");
+      console.log("[Story Upload] Starting:", { name: file.name, size: file.size, type: file.type });
+
       const filePath = `${user.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage.from("stories").upload(filePath, file);
-      if (uploadError) throw uploadError;
+      const { data: uploadData, error: uploadError } = await supabase.storage.from("stories").upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (uploadError) {
+        console.error("[Story Upload] Storage upload failed:", uploadError);
+        throw uploadError;
+      }
+      console.log("[Story Upload] Storage success:", uploadData);
+
       const { data: { publicUrl } } = supabase.storage.from("stories").getPublicUrl(filePath);
-      const { error } = await supabase.from("stories").insert({
+      console.log("[Story Upload] Public URL:", publicUrl);
+
+      const { data: dbData, error } = await supabase.from("stories").insert({
         user_id: user.id,
         media_url: publicUrl,
         media_type: mediaType.startsWith("video") ? "video" : "image",
-      });
-      if (error) throw error;
+      }).select().single();
+      if (error) {
+        console.error("[Story Upload] DB insert failed:", error);
+        throw error;
+      }
+      console.log("[Story Upload] DB insert success:", dbData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stories"] });
