@@ -94,12 +94,13 @@ const Explore = () => {
             </>
           )}
           {posts?.map((post: any, i: number) => (
-            <div
+            <Link
+              to={`/`}
               key={post.id}
               className={`${i === 2 || i === 6 ? "row-span-2" : ""} aspect-square overflow-hidden bg-secondary`}
             >
-              <img src={post.image_url} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer" loading="lazy" />
-            </div>
+              <img src={post.image_url} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy" />
+            </Link>
           ))}
           {!isLoading && (!posts || posts.length === 0) && (
             <div className="col-span-3 py-16 text-center text-muted-foreground">

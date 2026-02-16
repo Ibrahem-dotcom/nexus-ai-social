@@ -1,16 +1,28 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Heart, MessageCircle, Share2, Music, Volume2, VolumeX, BadgeCheck } from "lucide-react";
+import { Heart, MessageCircle, Share2, Music, Volume2, VolumeX, BadgeCheck, Send } from "lucide-react";
 import { useReels, useToggleReelLike } from "@/hooks/use-reels";
+import { useToggleFollow } from "@/hooks/use-profile";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { shareContent } from "@/lib/share";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAddComment } from "@/hooks/use-comments";
 
 const Reels = () => {
   const { data: reels, isLoading, error } = useReels();
   const [currentReel, setCurrentReel] = useState(0);
   const [muted, setMuted] = useState(false);
+  const [showComments, setShowComments] = useState<string | false>(false);
+  const [commentText, setCommentText] = useState("");
   const toggleLike = useToggleReelLike();
+  const toggleFollow = useToggleFollow();
+  const addComment = useAddComment();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const viewedReels = useRef(new Set<string>());
 
   // Auto-play current, pause others
@@ -78,7 +90,7 @@ const Reels = () => {
                 <Heart size={28} className={r.is_liked ? "text-neon-pink fill-neon-pink" : "text-foreground"} />
                 <span className="text-xs font-medium">{r.likes_count}</span>
               </button>
-              <button className="flex flex-col items-center gap-1">
+              <button onClick={() => { setShowComments(showComments === r.id ? false : r.id); setCommentText(""); }} className="flex flex-col items-center gap-1">
                 <MessageCircle size={28} className="text-foreground" />
                 <span className="text-xs font-medium">{r.comments_count}</span>
               </button>
@@ -93,10 +105,14 @@ const Reels = () => {
 
             <div className="absolute bottom-24 left-0 right-16 p-4" style={{ zIndex: 10 }}>
               <div className="flex items-center gap-2 mb-2">
-                <img src={r.profiles.avatar_url || "https://i.pravatar.cc/100"} alt="" className="w-9 h-9 rounded-full border-2 border-primary" />
-                <span className="font-semibold text-sm">{r.profiles.username}</span>
-                {r.profiles.is_verified && <BadgeCheck size={14} className="text-primary" />}
-                <button className="ml-2 px-3 py-1 rounded-lg border border-primary text-primary text-xs font-medium">Follow</button>
+                <button onClick={() => navigate(`/user/${r.user_id}`)} className="flex items-center gap-2">
+                  <img src={r.profiles.avatar_url || "https://i.pravatar.cc/100"} alt="" className="w-9 h-9 rounded-full border-2 border-primary" />
+                  <span className="font-semibold text-sm">{r.profiles.username}</span>
+                  {r.profiles.is_verified && <BadgeCheck size={14} className="text-primary" />}
+                </button>
+                {r.user_id !== user?.id && (
+                  <ReelFollowButton userId={r.user_id} />
+                )}
               </div>
               {r.caption && <p className="text-sm mb-2">{r.caption}</p>}
               {r.audio_name && (
@@ -106,6 +122,11 @@ const Reels = () => {
                 </div>
               )}
             </div>
+
+            {/* Comments overlay */}
+            {showComments === r.id && (
+              <ReelComments reelId={r.id} onClose={() => setShowComments(false)} />
+            )}
           </div>
         ))}
       </div>
@@ -128,6 +149,82 @@ const Reels = () => {
           document.addEventListener("touchend", handleEnd);
         }}
       />
+    </div>
+  );
+};
+
+// Sub-component: Follow button with real DB state
+const ReelFollowButton = ({ userId }: { userId: string }) => {
+  const { user } = useAuth();
+  const toggleFollow = useToggleFollow();
+  const { data: isFollowing } = useQuery({
+    queryKey: ["is-following", userId, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle();
+      return !!data;
+    },
+    enabled: !!user && !!userId,
+  });
+
+  return (
+    <button
+      onClick={() => toggleFollow.mutate({ targetUserId: userId, isFollowing: !!isFollowing })}
+      disabled={toggleFollow.isPending}
+      className={`ml-2 px-3 py-1 rounded-lg text-xs font-medium ${isFollowing ? "bg-secondary text-secondary-foreground" : "border border-primary text-primary"}`}
+    >
+      {toggleFollow.isPending ? "..." : isFollowing ? "Following" : "Follow"}
+    </button>
+  );
+};
+
+// Sub-component: Reel comments drawer
+const ReelComments = ({ reelId, onClose }: { reelId: string; onClose: () => void }) => {
+  const [text, setText] = useState("");
+  const { user } = useAuth();
+
+  const { data: comments, isLoading } = useQuery({
+    queryKey: ["reel-comments", reelId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("reel_comments").select("*").eq("reel_id", reelId).order("created_at", { ascending: true });
+      if (error) throw error;
+      const userIds = [...new Set((data || []).map((c: any) => c.user_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, username, avatar_url").in("user_id", userIds.length ? userIds : ["none"]);
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      return (data || []).map((c: any) => ({ ...c, profile: profileMap.get(c.user_id) || { username: "user", avatar_url: null } }));
+    },
+  });
+
+  const handleSend = async () => {
+    if (!text.trim() || !user) return;
+    await supabase.from("reel_comments").insert({ reel_id: reelId, user_id: user.id, content: text.trim() });
+    setText("");
+    // Refetch handled by invalidation
+  };
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 z-20 bg-background/95 backdrop-blur-lg rounded-t-2xl max-h-[60vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <span className="font-semibold text-sm">Comments</span>
+        <button onClick={onClose} className="text-muted-foreground text-sm">Close</button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {isLoading && <p className="text-muted-foreground text-sm text-center">Loading...</p>}
+        {comments?.map((c: any) => (
+          <div key={c.id} className="flex gap-2">
+            <img src={c.profile.avatar_url || "https://i.pravatar.cc/30"} alt="" className="w-7 h-7 rounded-full object-cover" />
+            <div>
+              <span className="text-xs font-semibold">{c.profile.username}</span>
+              <p className="text-sm text-muted-foreground">{c.content}</p>
+            </div>
+          </div>
+        ))}
+        {!isLoading && (!comments || comments.length === 0) && <p className="text-muted-foreground text-sm text-center">No comments yet</p>}
+      </div>
+      <div className="flex gap-2 p-3 border-t border-border">
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add comment..." className="flex-1 text-sm bg-secondary rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none" onKeyDown={(e) => e.key === "Enter" && handleSend()} />
+        <button onClick={handleSend} disabled={!text.trim()} className="text-primary disabled:opacity-50"><Send size={18} /></button>
+      </div>
     </div>
   );
 };
