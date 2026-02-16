@@ -80,7 +80,7 @@ const PostCard = ({ id, userId, username, avatar, image, caption, likes_count, c
             <span className="text-xs text-muted-foreground">{timeAgo}</span>
           </div>
         </button>
-        <button className="p-1 text-muted-foreground hover:text-foreground transition-colors">
+        <button onClick={() => toast({ title: "Post options coming soon" })} className="p-1 text-muted-foreground hover:text-foreground transition-colors">
           <MoreHorizontal size={18} />
         </button>
       </div>

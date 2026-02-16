@@ -1,4 +1,4 @@
-import { Search, Edit, Send, ArrowLeft } from "lucide-react";
+import { Search, Send, ArrowLeft } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useConversations, useMessages, useSendMessage } from "@/hooks/use-messages";
 import { useAuth } from "@/contexts/AuthContext";
@@ -77,9 +77,7 @@ const Messages = () => {
       <div className="sticky top-0 z-40 glass-strong p-4">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-display font-bold">Messages</h1>
-          <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
-            <Edit size={20} className="text-primary" />
-          </button>
+          {/* Edit button removed - new conversations created from user profiles */}
         </div>
         <div className="relative">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
