@@ -64,8 +64,9 @@ export function useToggleFollow() {
         await supabase.from("follows").insert({ follower_id: user.id, following_id: targetUserId });
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, { targetUserId }) => {
       queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["is-following", targetUserId] });
     },
   });
 }
