@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Heart, MessageCircle, Share2, Music, Volume2, VolumeX, BadgeCheck, Send } from "lucide-react";
 import { useReels, useToggleReelLike } from "@/hooks/use-reels";
 import { useToggleFollow } from "@/hooks/use-profile";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { shareContent } from "@/lib/share";
@@ -138,6 +138,10 @@ const Reels = () => {
       <div
         className="absolute inset-0"
         style={{ zIndex: 5 }}
+        onWheel={(e) => {
+          if (e.deltaY > 30 && currentReel < reels.length - 1) setCurrentReel(prev => prev + 1);
+          if (e.deltaY < -30 && currentReel > 0) setCurrentReel(prev => prev - 1);
+        }}
         onTouchStart={(e) => {
           const startY = e.touches[0].clientY;
           const handleEnd = (ev: TouchEvent) => {
@@ -195,11 +199,13 @@ const ReelComments = ({ reelId, onClose }: { reelId: string; onClose: () => void
     },
   });
 
+  const queryClient = useQueryClient();
   const handleSend = async () => {
     if (!text.trim() || !user) return;
     await supabase.from("reel_comments").insert({ reel_id: reelId, user_id: user.id, content: text.trim() });
     setText("");
-    // Refetch handled by invalidation
+    queryClient.invalidateQueries({ queryKey: ["reel-comments", reelId] });
+    queryClient.invalidateQueries({ queryKey: ["reels"] });
   };
 
   return (

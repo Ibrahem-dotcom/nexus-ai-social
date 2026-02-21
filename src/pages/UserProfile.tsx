@@ -1,5 +1,5 @@
 import { Grid3X3, BadgeCheck, ArrowLeft, MessageCircle } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -136,13 +136,13 @@ const UserProfile = () => {
       <div className="grid grid-cols-3 gap-0.5 p-0.5">
         {postsLoading && [1, 2, 3, 4, 5, 6].map(i => <div key={i} className="aspect-square bg-muted animate-pulse" />)}
         {userPosts?.map(post => (
-          <div key={post.id} className="aspect-square overflow-hidden bg-secondary">
+          <Link to="/" state={{ scrollToPost: post.id }} key={post.id} className="aspect-square overflow-hidden bg-secondary">
             {post.image_url ? (
-              <img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <img src={post.image_url} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" loading="lazy" />
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground text-xs">No image</div>
             )}
-          </div>
+          </Link>
         ))}
         {!postsLoading && (!userPosts || userPosts.length === 0) && (
           <div className="col-span-3 py-16 text-center text-muted-foreground"><p>No posts yet</p></div>

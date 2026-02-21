@@ -102,7 +102,7 @@ const PostCard = ({ id, userId, username, avatar, image, caption, likes_count, c
             </button>
             <button onClick={handleShare}><Share2 size={22} className="text-foreground" /></button>
           </div>
-          <button onClick={() => setSaved(!saved)}>
+          <button onClick={() => { setSaved(!saved); toast({ title: saved ? "Removed from saved" : "Saved!" }); }}>
             <Bookmark size={24} className={`transition-colors ${saved ? "text-primary fill-primary" : "text-foreground"}`} />
           </button>
         </div>

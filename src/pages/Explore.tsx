@@ -96,6 +96,7 @@ const Explore = () => {
           {posts?.map((post: any, i: number) => (
             <Link
               to={`/`}
+              state={{ scrollToPost: post.id }}
               key={post.id}
               className={`${i === 2 || i === 6 ? "row-span-2" : ""} aspect-square overflow-hidden bg-secondary`}
             >
