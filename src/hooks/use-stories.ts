@@ -38,7 +38,8 @@ export function useStories() {
       if (error) throw error;
 
       const userIds = [...new Set((data || []).map((s: any) => s.user_id))];
-      const { data: profiles } = await supabase.from("profiles").select("user_id, username, avatar_url, is_verified").in("user_id", userIds.length ? userIds : ["none"]);
+      if (userIds.length === 0) return [];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, username, avatar_url, is_verified").in("user_id", userIds);
       const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
 
       const grouped = new Map<string, StoryGroup>();
